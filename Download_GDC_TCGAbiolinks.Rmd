@@ -1,0 +1,87 @@
+---
+title: "TCGA Data Download from NCI's GDC Using TCGAbiolinks"
+output: html_document
+date: "2026-10-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+TCGAbiolinks Bioconductor package allows:
+  - Open-source data retrieval from GDC
+  - Data pre-processing
+  - Standard analyses
+  - Data visualization
+
+Default data structure for downloaded RNA-seq data from GDC using TCGAbiolinks 
+is a SummarizedExperiment object.
+
+Required packages:
+```{r}
+if (!require("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+if (!require("BiocManager", quietly = TRUE)) BiocManager::install("TCGAbiolinks")
+if (!require("BiocManager", quietly = TRUE)) BiocManager::install("SummarizedExperiment")
+
+suppressPackageStartupMessages(require(TCGAbiolinks))
+suppressPackageStartupMessages(require(SummarizedExperiment))
+```
+
+Define TCGA project to download the associated data
+```{r}
+TCGA_project <- "TCGA-PAAD"
+```
+
+Download clinical information from the TCGA project
+```{r}
+clinical <- GDCquery_clinic(project = TCGA_project, type = "clinical") 
+colnames(clinical)
+```
+
+Download RNA-seq processed data from normal samples
+```{r}
+query_normals <- GDCquery(
+    project = TCGA_project,
+    data.category = "Transcriptome Profiling",
+    data.type = "Gene Expression Quantification", 
+    workflow.type = "STAR - Counts",
+    sample.type = "Solid Tissue Normal"
+)
+GDCdownload(query = query_normals)
+rnaseq_normals <- GDCprepare(query = query_normals)
+```
+
+Download RNA-seq processed data from tumor (primary) samples
+```{r}
+query_tumors <- GDCquery(
+    project = TCGA_project,
+    data.category = "Transcriptome Profiling",
+    data.type = "Gene Expression Quantification", 
+    workflow.type = "STAR - Counts",
+    sample.type = "Primary Tumor"
+)
+GDCdownload(query = query_tumors)
+rnaseq_tumors <- GDCprepare(query = query_tumors)
+```
+
+Available assays in SummarizedExperiment: 
+  - unstranded
+  - stranded_first
+  - stranded_second
+  - tpm_unstrand
+  - fpkm_unstrand
+  - fpkm_uq_unstrand
+  
+```{r}
+filename_normals <- paste0(TCGA_project, "_Normal_RNA-seq_RangedSummarizedExperiment.rds")
+filename_tumors  <- paste0(TCGA_project, "_Tumor_RNA-seq_RangedSummarizedExperiment.rds")
+
+saveRDS(rnaseq_normals, filename_normals)
+saveRDS(rnaseq_tumors, filename_tumors)
+```
+
+```{r}
+sessionInfo()
+writeLines(capture.output(sessionInfo()), "session_info.txt")
+```
+
